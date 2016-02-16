@@ -18,14 +18,17 @@ class ExchangeRatesActor(exchanges: List[Exchange]) extends Actor {
         override def receive = {
           case ExchangeRatePair(exchangeName, _, rate) =>
             results(exchangeName) = Some(rate)
-            respondIfDone()
-
+            replyToOriginalSenderIfAllExchangesReplied()
         }
 
-        def respondIfDone() = {
+        def replyToOriginalSenderIfAllExchangesReplied() = {
           if (!results.values.exists(_.isEmpty)) {
             originalSender ! ExchangeRateResults(currencyPair, results.map(result => (result._1, result._2.get)).toMap)
           }
+        }
+
+        exchanges.foreach { exchange =>
+          exchange.exchangeActor ! ExchangeRateRequest(currencyPair)
         }
       }))
   }
